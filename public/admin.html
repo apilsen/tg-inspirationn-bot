@@ -2034,10 +2034,11 @@
         }
 
         // Загрузка всех данных
-       async function loadAllData() {
+      async function loadAllData() {
     console.log('🔄 Начало загрузки всех данных...');
     
     try {
+        // Загружаем основные данные
         await loadStats();
         await loadUsers();
         await loadRoles();
@@ -2049,96 +2050,99 @@
         await loadPosts();
         await loadAdmins();
         await loadModerationData();
-        await loadPrivateVideosAdmin(); // ← ЭТА СТРОЧКА ДОЛЖНА БЫТЬ
+        await loadPrivateVideosAdmin();
+        
+        // Инициализируем обработчики после загрузки данных
+        setTimeout(initializeButtonHandlers, 500);
         
         console.log('✅ Все данные успешно загружены');
     } catch (error) {
         console.error('❌ Ошибка загрузки данных:', error);
     }
 }
-
-      function showTab(tabName) {
+     function showTab(tabName) {
     console.log('🎯 Переключение на вкладку:', tabName);
     
-    try {
-        // 1. Скрыть все вкладки
-        document.querySelectorAll('.tab-content').forEach(tab => {
-            tab.classList.remove('active');
-        });
-        
-        // 2. Убрать активный класс со всех кнопок
-        document.querySelectorAll('.nav-tab').forEach(tab => {
-            tab.classList.remove('active');
-        });
-        
-        // 3. Показать выбранную вкладку
-        const targetTab = document.getElementById(tabName);
-        if (targetTab) {
-            targetTab.classList.add('active');
-        }
-        
-        // 4. Активировать кнопку
-        document.querySelectorAll('.nav-tab').forEach(tab => {
-            if (tab.getAttribute('onclick')?.includes(`showTab('${tabName}')`)) {
-                tab.classList.add('active');
-            }
-        });
-        
-        // 5. Загружаем данные для вкладки с обработкой ошибок
-        try {
-            loadTabData(tabName);
-        } catch (error) {
-            console.error(`Ошибка загрузки данных для вкладки ${tabName}:`, error);
-        }
-        
-    } catch (error) {
-        console.error('Ошибка переключения вкладки:', error);
-        showMessage(`❌ Ошибка переключения на вкладку "${tabName}"`, 'error');
+    // Проверяем существование вкладки
+    const targetTab = document.getElementById(tabName);
+    if (!targetTab) {
+        console.error('❌ Вкладка не найдена:', tabName);
+        showMessage(`❌ Вкладка "${tabName}" не найдена`, 'error');
+        return;
     }
+    
+    // 1. Скрыть все вкладки
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    // 2. Убрать активный класс со всех кнопок
+    document.querySelectorAll('.nav-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    // 3. Показать выбранную вкладку
+    targetTab.classList.add('active');
+    
+    // 4. Активировать кнопку - ИСПРАВЛЕННАЯ ЛОГИКА
+    document.querySelectorAll('.nav-tab').forEach(tab => {
+        // Получаем текст onclick атрибута и сравниваем с нужной вкладкой
+        const onclickAttr = tab.getAttribute('onclick');
+        if (onclickAttr && onclickAttr.includes(`'${tabName}'`)) {
+            tab.classList.add('active');
+        }
+    });
+    
+    // 5. Загружаем данные для вкладки
+    loadTabData(tabName);
+    
+    console.log('✅ Вкладка активирована:', tabName);
 }
-
         // Загрузка данных для вкладки
 function loadTabData(tabName) {
     console.log('📥 Загрузка данных для:', tabName);
     
     switch(tabName) {
         case 'privateVideos':
-            loadPrivateVideosAdmin(); // ← ДОБАВЬ ЭТУ СТРОЧКУ
+            loadPrivateVideosAdmin();
             break;
         case 'moderation':
             loadWorksForModeration();
             break;
-                case 'privateVideos':
-                    loadPrivateVideosAdmin();
-                    break;
-                case 'admins':
-                    loadAdmins();
-                    break;
-                case 'posts':
-                    loadPosts();
-                    break;
-                case 'users':
-                    loadUsers();
-                    break;
-                case 'roles':
-                    loadRoles();
-                    break;
-                case 'quizzes':
-                    loadQuizzes();
-                    break;
-                case 'marathons':
-                    loadMarathons();
-                    break;
-                case 'interactives':
-                    loadInteractives();
-                    break;
-                case 'shop':
-                    loadShopItems();
-                    break;
-                default:
-                    console.log('ℹ️ Нет специальной загрузки для:', tabName);
-            }
-        }
+        case 'admins':
+            loadAdmins();
+            break;
+        case 'posts':
+            loadPosts();
+            break;
+        case 'users':
+            loadUsers();
+            break;
+        case 'roles':
+            loadRoles();
+            break;
+        case 'characters':
+            loadCharacters(); // ← ДОБАВЛЕНО
+            break;
+        case 'quizzes':
+            loadQuizzes();
+            break;
+        case 'marathons':
+            loadMarathons();
+            break;
+        case 'interactives':
+            loadInteractives();
+            break;
+        case 'shop':
+            loadShopItems();
+            break;
+        case 'dashboard':
+            // Для дашборда данные уже загружены
+            break;
+        default:
+            console.log('ℹ️ Нет специальной загрузки для:', tabName);
+    }
+}
 
         // Скрыть все формы
         function hideAllForms() {
@@ -6079,6 +6083,149 @@ function simpleParseTelegramUrl(url) {
             }
         });
 
+// ==================== ИСПРАВЛЕНИЕ ОБРАБОТЧИКОВ КНОПОК ====================
+
+// Функция для привязки обработчиков ко всем кнопкам
+function initializeButtonHandlers() {
+    console.log('🔧 Инициализация обработчиков кнопок...');
+    
+    // Обработчики для кнопок персонажей
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.btn-warning') && e.target.closest('.character-card')) {
+            const characterCard = e.target.closest('.character-card');
+            const editBtn = characterCard.querySelector('.btn-warning');
+            const onclickAttr = editBtn.getAttribute('onclick');
+            if (onclickAttr && onclickAttr.includes('editCharacter')) {
+                const match = onclickAttr.match(/editCharacter\((\d+)\)/);
+                if (match) {
+                    const characterId = parseInt(match[1]);
+                    editCharacter(characterId);
+                }
+            }
+        }
+    });
+    
+    // Обработчики для кнопок ролей
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.btn-warning') && e.target.closest('.role-card')) {
+            const roleCard = e.target.closest('.role-card');
+            const editBtn = roleCard.querySelector('.btn-warning');
+            const onclickAttr = editBtn.getAttribute('onclick');
+            if (onclickAttr && onclickAttr.includes('editRole')) {
+                const match = onclickAttr.match(/editRole\((\d+)\)/);
+                if (match) {
+                    const roleId = parseInt(match[1]);
+                    editRole(roleId);
+                }
+            }
+        }
+    });
+
+// Обработчики для кнопок удаления
+document.addEventListener('click', function(e) {
+    if (e.target.closest('.btn-danger') && !e.target.closest('.action-buttons .btn-danger')) {
+        const deleteBtn = e.target.closest('.btn-danger');
+        const onclickAttr = deleteBtn.getAttribute('onclick');
+        
+        if (onclickAttr) {
+            if (onclickAttr.includes('deleteCharacter')) {
+                const match = onclickAttr.match(/deleteCharacter\((\d+)\)/);
+                if (match) {
+                    const characterId = parseInt(match[1]);
+                    deleteCharacter(characterId);
+                }
+            }
+            else if (onclickAttr.includes('deleteRole')) {
+                const match = onclickAttr.match(/deleteRole\((\d+)\)/);
+                if (match) {
+                    const roleId = parseInt(match[1]);
+                    deleteRole(roleId);
+                }
+            }
+            else if (onclickAttr.includes('deleteQuiz')) {
+                const match = onclickAttr.match(/deleteQuiz\((\d+)\)/);
+                if (match) {
+                    const quizId = parseInt(match[1]);
+                    deleteQuiz(quizId);
+                }
+            }
+            else if (onclickAttr.includes('deleteMarathon')) {
+                const match = onclickAttr.match(/deleteMarathon\((\d+)\)/);
+                if (match) {
+                    const marathonId = parseInt(match[1]);
+                    deleteMarathon(marathonId);
+                }
+            }
+            else if (onclickAttr.includes('deleteInteractive')) {
+                const match = onclickAttr.match(/deleteInteractive\((\d+)\)/);
+                if (match) {
+                    const interactiveId = parseInt(match[1]);
+                    deleteInteractive(interactiveId);
+                }
+            }
+            else if (onclickAttr.includes('deleteShopItem')) {
+                const match = onclickAttr.match(/deleteShopItem\((\d+)\)/);
+                if (match) {
+                    const itemId = parseInt(match[1]);
+                    deleteShopItem(itemId);
+                }
+            }
+            else if (onclickAttr.includes('deletePost')) {
+                const match = onclickAttr.match(/deletePost\((\d+)\)/);
+                if (match) {
+                    const postId = parseInt(match[1]);
+                    deletePost(postId);
+                }
+            }
+            else if (onclickAttr.includes('deleteAdmin')) {
+                const match = onclickAttr.match(/deleteAdmin\((\d+)\)/);
+                if (match) {
+                    const adminId = parseInt(match[1]);
+                    deleteAdmin(adminId);
+                }
+            }
+            else if (onclickAttr.includes('deletePrivateVideo')) {
+                const match = onclickAttr.match(/deletePrivateVideo\((\d+)\)/);
+                if (match) {
+                    const videoId = parseInt(match[1]);
+                    deletePrivateVideo(videoId);
+                }
+            }
+        }
+    }
+    
+    // Обработчики для кнопок квизов
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.btn-warning') && e.target.closest('.quiz-card')) {
+            const quizCard = e.target.closest('.quiz-card');
+            const editBtn = quizCard.querySelector('.btn-warning');
+            const onclickAttr = editBtn.getAttribute('onclick');
+            if (onclickAttr && onclickAttr.includes('editQuiz')) {
+                const match = onclickAttr.match(/editQuiz\((\d+)\)/);
+                if (match) {
+                    const quizId = parseInt(match[1]);
+                    editQuiz(quizId);
+                }
+            }
+        }
+    });
+    
+    console.log('✅ Обработчики кнопок инициализированы');
+}
+
+// Инициализация при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Инициализация админ-панели...');
+    
+    // Инициализируем админ-панель
+    initAdminPanel();
+    
+    // Инициализируем обработчики кнопок
+    setTimeout(initializeButtonHandlers, 1000);
+    
+    console.log('✅ Админ-панель инициализирована');
+});
+        
         // ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ ПРИВАТНЫХ МАТЕРИАЛОВ ====================
 
 // Получение названия категории для админки
